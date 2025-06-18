@@ -1,0 +1,20 @@
+name: flutter_hooks_lint_plugin_plus
+
+packages:
+  - flutter_hooks_lint_plugin_plus
+  - lint_tester
+
+scripts:
+  test:
+    description: Run tests for all packages
+    run: dart test
+
+  lint:
+    description: Run custom lint on lint_tester
+    run: dart run custom_lint
+    exec:
+      scope: lint_tester
+
+  format:
+    description: Format all Dart files
+    run: dart format .
