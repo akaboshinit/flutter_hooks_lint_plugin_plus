@@ -1,0 +1,11 @@
+name: lint_tester
+description: Test files for flutter_hooks_lint_plugin_plus
+version: 1.0.0
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dev_dependencies:
+  custom_lint: ^0.7.0
+  flutter_hooks_lint_plugin_plus:
+    path: ../

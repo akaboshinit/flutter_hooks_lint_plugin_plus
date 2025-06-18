@@ -1,0 +1,10 @@
+analyzer:
+  errors:
+    unused_local_variable: ignore
+  plugins:
+    - custom_lint
+
+custom_lint:
+  rules:
+    - hooks_exhaustive_deps
+    - hooks_no_nested_usage
