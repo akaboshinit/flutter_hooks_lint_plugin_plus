@@ -6,5 +6,11 @@ analyzer:
 
 custom_lint:
   rules:
-    - hooks_exhaustive_deps
+    - hooks_exhaustive_deps:
+        constant_hooks:
+          - useRef
+          - useIsMounted
+          - useFocusNode
+          - useContext
+          - useConstantValue
     - hooks_no_nested_usage

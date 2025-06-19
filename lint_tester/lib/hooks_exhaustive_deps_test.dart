@@ -2,6 +2,16 @@
 T useState<T>(T initialValue) => initialValue;
 void useEffect(void Function() effect, [List<dynamic>? deps]) {}
 
+// Mock constant hooks
+T useRef<T>(T initialValue) => initialValue;
+bool useIsMounted() => true;
+dynamic useFocusNode() => null;
+dynamic useContext() => null;
+dynamic useConstantValue() => null;
+
+// Mock non-constant hook (not in constant_hooks config)
+dynamic useCustomHook() => null;
+
 void testMissingDependencies() {
   final variable1 = useState('test1');
   final variable2 = useState('test2');
@@ -58,4 +68,40 @@ void testCorrectUsage() {
   useEffect(() {
     print('static message');
   }, []);
+}
+
+void testConstantHooks() {
+  final variable1 = useState('test1');
+  final ref = useRef('test_ref');
+  final isMounted = useIsMounted();
+  final focusNode = useFocusNode();
+  final context = useContext();
+  final constantValue = useConstantValue();
+  final customValue = useCustomHook(); // Not a constant hook
+
+  // Correct usage - constant hooks should not be in dependencies (no lint expected)
+  useEffect(() {
+    print(variable1);
+    print(ref);
+    print(isMounted);
+    print(focusNode);
+    print(context);
+  }, [variable1]);
+
+  // expect_lint: hooks_exhaustive_deps
+  useEffect(() {
+    print(variable1);
+    print(ref);
+  }, [variable1, ref]); // ref is a constant hook and should not be in deps
+
+  // Correct usage - constant hooks only (no lint expected)
+  useEffect(() {
+    print(ref);
+    print(isMounted);
+  }, []); // Should not require constant hooks in deps
+
+  // expect_lint: hooks_exhaustive_deps
+  useEffect(() {
+    print(customValue); // customValue from useCustomHook is not a constant hook
+  }, []); // Missing dependency: customValue should be in deps
 }

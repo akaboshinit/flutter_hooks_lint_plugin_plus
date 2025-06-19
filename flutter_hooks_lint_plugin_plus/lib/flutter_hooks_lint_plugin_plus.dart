@@ -8,7 +8,7 @@ PluginBase createPlugin() => _FlutterHooksLintPlugin();
 class _FlutterHooksLintPlugin extends PluginBase {
   @override
   List<LintRule> getLintRules(CustomLintConfigs configs) => [
-        HooksExhaustiveDeps(),
+        HooksExhaustiveDeps(configs: configs),
         HooksNoNestedUsage(),
       ];
 }
