@@ -94,6 +94,9 @@ class HooksExhaustiveDeps extends DartLintRule {
       }
     }
 
+    // Check for ignore_keys comment
+    final ignoredKeys = _getIgnoredKeys(node);
+
     // Find constant hook variables by scanning the containing function
     final constantHookVariables = _findConstantHookVariables(node);
 
@@ -107,15 +110,20 @@ class HooksExhaustiveDeps extends DartLintRule {
     final unusedDeps = declaredDependencies.difference(usedVariables);
     final unnecessaryDeps = unusedDeps.union(declaredConstantHooks);
 
-    if (missingDeps.isNotEmpty || unnecessaryDeps.isNotEmpty) {
+    // Filter out ignored keys from both missing and unnecessary dependencies
+    final filteredMissingDeps = missingDeps.difference(ignoredKeys);
+    final filteredUnnecessaryDeps = unnecessaryDeps.difference(ignoredKeys);
+
+    if (filteredMissingDeps.isNotEmpty || filteredUnnecessaryDeps.isNotEmpty) {
       final message = StringBuffer();
-      if (missingDeps.isNotEmpty) {
-        message.write('Missing dependencies: ${missingDeps.join(', ')}');
-      }
-      if (unnecessaryDeps.isNotEmpty) {
-        if (message.isNotEmpty) message.write('. ');
+      if (filteredMissingDeps.isNotEmpty) {
         message
-            .write('Unnecessary dependencies: ${unnecessaryDeps.join(', ')}');
+            .write('Missing dependencies: ${filteredMissingDeps.join(', ')}');
+      }
+      if (filteredUnnecessaryDeps.isNotEmpty) {
+        if (message.isNotEmpty) message.write('. ');
+        message.write(
+            'Unnecessary dependencies: ${filteredUnnecessaryDeps.join(', ')}');
       }
 
       reporter.atNode(
@@ -164,6 +172,52 @@ class HooksExhaustiveDeps extends DartLintRule {
         }
       }
     }
+  }
+
+  Set<String> _getIgnoredKeys(MethodInvocation node) {
+    final ignoredKeys = <String>{};
+
+    // Get the compilation unit to access line info
+    AstNode? current = node;
+    while (current != null && current is! CompilationUnit) {
+      current = current.parent;
+    }
+
+    if (current is CompilationUnit) {
+      final lineInfo = current.lineInfo;
+      final nodeStartLine = lineInfo.getLocation(node.offset).lineNumber;
+      final nodeEndLine = lineInfo.getLocation(node.end).lineNumber;
+
+      // Get the source content directly from the resolver
+      final source = current.declaredElement?.source.contents.data;
+      if (source != null) {
+        final lines = source.split('\n');
+
+        // Check the line before the useEffect and the line where useEffect ends
+        final linesToCheck = [
+          nodeStartLine - 1, // Line before useEffect
+          nodeEndLine, // Line where useEffect ends (for inline comments)
+        ];
+
+        for (final lineNumber in linesToCheck) {
+          final lineIdx = lineNumber - 1; // Convert to 0-based index
+          if (lineIdx >= 0 && lineIdx < lines.length) {
+            final line = lines[lineIdx];
+            final match = RegExp(r'//\s*ignore_keys:\s*(.+)').firstMatch(line);
+            if (match != null) {
+              final keysString = match.group(1)!;
+              final keys = keysString
+                  .split(',')
+                  .map((key) => key.trim())
+                  .where((key) => key.isNotEmpty);
+              ignoredKeys.addAll(keys);
+            }
+          }
+        }
+      }
+    }
+
+    return ignoredKeys;
   }
 }
 
