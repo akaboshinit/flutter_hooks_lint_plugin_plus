@@ -13,8 +13,8 @@ class HooksExhaustiveDeps extends DartLintRule {
 
   static const _code = LintCode(
     name: 'hooks_exhaustive_deps',
-    problemMessage: 'Missing or unnecessary dependencies in useEffect hook.',
-    correctionMessage: 'Add missing dependencies or remove unnecessary ones.',
+    problemMessage: 'Missing or unnecessary dependencies {0}',
+    correctionMessage: 'Update the dependency array to match the variables used in the effect.',
   );
 
   @override

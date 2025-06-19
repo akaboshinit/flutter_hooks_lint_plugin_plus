@@ -22,7 +22,7 @@ class IgnoreKeysTestWidget {
     }, []);
 
     // Test case 3: ignore_keys with mixed spaces
-    // ignore_keys:  variable2 , variable3
+    // ignore_keys: variable2, variable3
     useEffect(() {
       print(variable2['value']);
       print(variable3['value']);
