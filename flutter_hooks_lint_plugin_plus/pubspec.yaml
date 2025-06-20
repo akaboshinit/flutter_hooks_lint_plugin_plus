@@ -1,6 +1,6 @@
 name: flutter_hooks_lint_plugin_plus
 description: A custom_lint plugin for Flutter Hooks that provides lint rules for hook usage best practices
-version: 1.0.0
+version: 0.0.1
 repository: https://github.com/akaboshinit/flutter_hooks_lint_plugin_plus
 
 environment:
