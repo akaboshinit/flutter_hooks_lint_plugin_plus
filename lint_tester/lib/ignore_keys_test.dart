@@ -9,20 +9,20 @@ class IgnoreKeysTestWidget {
     final variable2 = useState('');
     final variable3 = useState(false);
 
-    // Test case 1: ignore_keys comment on the same line
+    // ignore_keys: variable1
     useEffect(() {
       print(variable1['value']);
       print(variable2['value']);
-    }, [variable3['value']]); // ignore_keys: variable1, variable2
+    }, [variable2['value']]);
 
-    // Test case 2: ignore_keys comment on the previous line
     // ignore_keys: variable1
     useEffect(() {
       print(variable1['value']);
     }, []);
 
-    // Test case 3: ignore_keys with mixed spaces
-    // ignore_keys: variable2, variable3
+    useEffect(() {}, []);
+
+    // ignore_keys: variable1, variable2, variable3
     useEffect(() {
       print(variable2['value']);
       print(variable3['value']);

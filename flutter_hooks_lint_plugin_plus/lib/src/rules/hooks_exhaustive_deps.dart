@@ -13,8 +13,8 @@ class HooksExhaustiveDeps extends DartLintRule {
 
   static const _code = LintCode(
     name: 'hooks_exhaustive_deps',
-    problemMessage: 'Missing or unnecessary dependencies {0}',
-    correctionMessage: 'Update the dependency array to match the variables used in the effect.',
+    problemMessage: 'Hook deps: {0}',
+    correctionMessage: 'Update the dependency array.',
   );
 
   @override
@@ -90,46 +90,53 @@ class HooksExhaustiveDeps extends DartLintRule {
       for (final element in dependencies.elements) {
         if (element is SimpleIdentifier) {
           declaredDependencies.add(element.name);
+        } else if (element is IndexExpression) {
+          final target = element.target;
+          if (target is SimpleIdentifier) {
+            declaredDependencies.add(target.name);
+          }
+        } else if (element is PrefixedIdentifier) {
+          declaredDependencies.add(element.prefix.name);
+        } else if (element is PropertyAccess) {
+          final target = element.target;
+          if (target is SimpleIdentifier) {
+            declaredDependencies.add(target.name);
+          }
         }
       }
     }
 
-    // Check for ignore_keys comment
     final ignoredKeys = _getIgnoredKeys(node);
-
-    // Find constant hook variables by scanning the containing function
     final constantHookVariables = _findConstantHookVariables(node);
 
-    // Exclude constant hook variables from missing dependencies
     final actualUsedVariables = usedVariables.difference(constantHookVariables);
     final missingDeps = actualUsedVariables.difference(declaredDependencies);
 
-    // For unnecessary deps, check both unused deps and constant hooks in deps
     final declaredConstantHooks =
         declaredDependencies.intersection(constantHookVariables);
     final unusedDeps = declaredDependencies.difference(usedVariables);
     final unnecessaryDeps = unusedDeps.union(declaredConstantHooks);
 
-    // Filter out ignored keys from both missing and unnecessary dependencies
     final filteredMissingDeps = missingDeps.difference(ignoredKeys);
     final filteredUnnecessaryDeps = unnecessaryDeps.difference(ignoredKeys);
 
     if (filteredMissingDeps.isNotEmpty || filteredUnnecessaryDeps.isNotEmpty) {
-      final message = StringBuffer();
+      final parts = <String>[];
+      
       if (filteredMissingDeps.isNotEmpty) {
-        message
-            .write('Missing dependencies: ${filteredMissingDeps.join(', ')}');
+        parts.add('Missing: ${filteredMissingDeps.join(', ')}');
       }
+      
       if (filteredUnnecessaryDeps.isNotEmpty) {
-        if (message.isNotEmpty) message.write('. ');
-        message.write(
-            'Unnecessary dependencies: ${filteredUnnecessaryDeps.join(', ')}');
+        parts.add('Unnecessary: ${filteredUnnecessaryDeps.join(', ')}');
       }
+      
+      final message = parts.join(' • ');
 
       reporter.atNode(
         node,
         _code,
-        arguments: [message.toString()],
+        arguments: [message],
       );
     }
   }
@@ -177,7 +184,6 @@ class HooksExhaustiveDeps extends DartLintRule {
   Set<String> _getIgnoredKeys(MethodInvocation node) {
     final ignoredKeys = <String>{};
 
-    // Get the compilation unit to access line info
     AstNode? current = node;
     while (current != null && current is! CompilationUnit) {
       current = current.parent;
@@ -188,19 +194,17 @@ class HooksExhaustiveDeps extends DartLintRule {
       final nodeStartLine = lineInfo.getLocation(node.offset).lineNumber;
       final nodeEndLine = lineInfo.getLocation(node.end).lineNumber;
 
-      // Get the source content directly from the resolver
       final source = current.declaredElement?.source.contents.data;
       if (source != null) {
         final lines = source.split('\n');
 
-        // Check the line before the useEffect and the line where useEffect ends
         final linesToCheck = [
-          nodeStartLine - 1, // Line before useEffect
-          nodeEndLine, // Line where useEffect ends (for inline comments)
+          nodeStartLine - 1,
+          nodeEndLine,
         ];
 
         for (final lineNumber in linesToCheck) {
-          final lineIdx = lineNumber - 1; // Convert to 0-based index
+          final lineIdx = lineNumber - 1;
           if (lineIdx >= 0 && lineIdx < lines.length) {
             final line = lines[lineIdx];
             final match = RegExp(r'//\s*ignore_keys:\s*(.+)').firstMatch(line);
@@ -231,13 +235,26 @@ class _VariableVisitor extends RecursiveAstVisitor<void> {
   void visitSimpleIdentifier(SimpleIdentifier node) {
     final name = node.name;
 
-    // 関数呼び出しの関数名は除外
     if (node.parent is MethodInvocation &&
         (node.parent as MethodInvocation).methodName == node) {
       return;
     }
+    
+    if (node.parent is IndexExpression && 
+        (node.parent as IndexExpression).index == node) {
+      return;
+    }
+    
+    if (node.parent is PropertyAccess &&
+        (node.parent as PropertyAccess).propertyName == node) {
+      return;
+    }
+    
+    if (node.parent is PrefixedIdentifier &&
+        (node.parent as PrefixedIdentifier).identifier == node) {
+      return;
+    }
 
-    // それ以外は変数として検出
     variables.add(name);
     super.visitSimpleIdentifier(node);
   }
