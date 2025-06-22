@@ -27,5 +27,13 @@ class IgnoreKeysTestWidget {
       print(variable2['value']);
       print(variable3['value']);
     }, [variable1['value']]);
+
+    useEffect(() {
+      Future.microtask(() {});
+      Future.value(variable1['value']);
+      Future.delayed(const Duration(seconds: 1), () {
+        print(variable2);
+      });
+    }, [variable1['value'], variable2]);
   }
 }

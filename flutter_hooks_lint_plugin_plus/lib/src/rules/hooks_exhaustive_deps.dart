@@ -228,34 +228,95 @@ class HooksExhaustiveDeps extends DartLintRule {
 class _VariableVisitor extends RecursiveAstVisitor<void> {
   final Set<String> variables;
   final Set<String> constantHookNames;
+  final Set<String> localVariables = <String>{};
+  final Set<String> globalIdentifiers = <String>{};
 
   _VariableVisitor(this.variables, this.constantHookNames);
+
+  @override
+  void visitVariableDeclaration(VariableDeclaration node) {
+    localVariables.add(node.name.lexeme);
+    super.visitVariableDeclaration(node);
+  }
+
+  @override
+  void visitSimpleFormalParameter(SimpleFormalParameter node) {
+    localVariables.add(node.name!.lexeme);
+    super.visitSimpleFormalParameter(node);
+  }
+
+  @override
+  void visitCatchClause(CatchClause node) {
+    if (node.exceptionParameter != null) {
+      localVariables.add(node.exceptionParameter!.name.lexeme);
+    }
+    if (node.stackTraceParameter != null) {
+      localVariables.add(node.stackTraceParameter!.name.lexeme);
+    }
+    super.visitCatchClause(node);
+  }
+
+  @override
+  void visitDeclaredVariablePattern(DeclaredVariablePattern node) {
+    localVariables.add(node.name.lexeme);
+    super.visitDeclaredVariablePattern(node);
+  }
 
   @override
   void visitSimpleIdentifier(SimpleIdentifier node) {
     final name = node.name;
 
+    // Skip if this is a method name in a method invocation
     if (node.parent is MethodInvocation &&
         (node.parent as MethodInvocation).methodName == node) {
       return;
     }
     
+    // Skip if this is an index in an index expression
     if (node.parent is IndexExpression && 
         (node.parent as IndexExpression).index == node) {
       return;
     }
     
+    // Skip if this is a property name in a property access
     if (node.parent is PropertyAccess &&
         (node.parent as PropertyAccess).propertyName == node) {
       return;
     }
     
+    // Skip if this is an identifier in a prefixed identifier
     if (node.parent is PrefixedIdentifier &&
         (node.parent as PrefixedIdentifier).identifier == node) {
       return;
     }
 
+    // Skip if this is a type name (used as a prefix for static members)
+    if (node.parent is PrefixedIdentifier &&
+        (node.parent as PrefixedIdentifier).prefix == node) {
+      // This identifier is used as a type prefix - always skip it
+      return;
+    }
+
+    // Skip if this is a type name in a named type (e.g., Duration in "const Duration()")
+    if (node.parent is NamedType) {
+      return;
+    }
+
+    // Skip if this is a named parameter label (e.g., "seconds" in "Duration(seconds: 1)")
+    if (node.parent is Label) {
+      return;
+    }
+
+    // Skip if this is a constructor name in an instance creation
+    if (node.parent is ConstructorName) {
+      return;
+    }
+
+    // Skip if this is a local variable (declared within the callback)
+    if (localVariables.contains(name)) {
+      return;
+    }
+
     variables.add(name);
-    super.visitSimpleIdentifier(node);
   }
 }
