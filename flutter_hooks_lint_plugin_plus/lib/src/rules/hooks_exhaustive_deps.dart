@@ -17,6 +17,8 @@ class HooksExhaustiveDeps extends DartLintRule {
     correctionMessage: 'Update the dependency array.',
   );
 
+  LintCode get code => _code;
+
   @override
   void run(
     CustomLintResolver resolver,
@@ -122,16 +124,16 @@ class HooksExhaustiveDeps extends DartLintRule {
 
     if (filteredMissingDeps.isNotEmpty || filteredUnnecessaryDeps.isNotEmpty) {
       final parts = <String>[];
-      
+
       if (filteredMissingDeps.isNotEmpty) {
         parts.add('Missing: ${filteredMissingDeps.join(', ')}');
       }
-      
+
       if (filteredUnnecessaryDeps.isNotEmpty) {
         parts.add('Unnecessary: ${filteredUnnecessaryDeps.join(', ')}');
       }
-      
-      final message = parts.join(' • ');
+
+      final message = parts.join(', ');
 
       reporter.atNode(
         node,
@@ -271,19 +273,19 @@ class _VariableVisitor extends RecursiveAstVisitor<void> {
         (node.parent as MethodInvocation).methodName == node) {
       return;
     }
-    
+
     // Skip if this is an index in an index expression
-    if (node.parent is IndexExpression && 
+    if (node.parent is IndexExpression &&
         (node.parent as IndexExpression).index == node) {
       return;
     }
-    
+
     // Skip if this is a property name in a property access
     if (node.parent is PropertyAccess &&
         (node.parent as PropertyAccess).propertyName == node) {
       return;
     }
-    
+
     // Skip if this is an identifier in a prefixed identifier
     if (node.parent is PrefixedIdentifier &&
         (node.parent as PrefixedIdentifier).identifier == node) {
@@ -318,5 +320,25 @@ class _VariableVisitor extends RecursiveAstVisitor<void> {
     }
 
     variables.add(name);
+  }
+
+  @override
+  void visitPropertyAccess(PropertyAccess node) {
+    // For expressions like streamController.sink, we need to track streamController
+    final target = node.target;
+    if (target is SimpleIdentifier && !localVariables.contains(target.name)) {
+      variables.add(target.name);
+    }
+    super.visitPropertyAccess(node);
+  }
+
+  @override
+  void visitPrefixedIdentifier(PrefixedIdentifier node) {
+    // For expressions like streamController.sink, we need to track streamController
+    final prefix = node.prefix;
+    if (!localVariables.contains(prefix.name)) {
+      variables.add(prefix.name);
+    }
+    super.visitPrefixedIdentifier(node);
   }
 }
